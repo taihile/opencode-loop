@@ -23,6 +23,15 @@ const sourcemapsFlag = process.argv.includes("--sourcemaps")
 const plugin = createSolidTransformPlugin()
 const skipEmbedWebUi = process.argv.includes("--skip-embed-web-ui")
 
+// Optional filter: `bun run script/build.ts --targets linux-x64,win32-x64,darwin-arm64`
+// Keeps full cross-platform installs/downloads limited to what you actually build.
+const targetsFlag = process.argv.find((arg) => arg.startsWith("--targets="))?.slice("--targets=".length)
+const desktopTargets = new Set(
+  targetsFlag
+    ? targetsFlag.split(",").map((item) => item.trim().replace(/\.exe$/, ""))
+    : [],
+)
+
 const createEmbeddedWebUIBundle = async () => {
   console.log(`Building Web UI to embed in the binary`)
   const appDir = path.join(import.meta.dirname, "../../app")
@@ -58,32 +67,11 @@ const allTargets: {
 }[] = [
   {
     os: "linux",
-    arch: "arm64",
-  },
-  {
-    os: "linux",
     arch: "x64",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    avx2: false,
   },
   {
     os: "linux",
     arch: "arm64",
-    abi: "musl",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    abi: "musl",
-  },
-  {
-    os: "linux",
-    arch: "x64",
-    abi: "musl",
-    avx2: false,
   },
   {
     os: "darwin",
@@ -94,22 +82,12 @@ const allTargets: {
     arch: "x64",
   },
   {
-    os: "darwin",
+    os: "win32",
     arch: "x64",
-    avx2: false,
   },
   {
     os: "win32",
     arch: "arm64",
-  },
-  {
-    os: "win32",
-    arch: "x64",
-  },
-  {
-    os: "win32",
-    arch: "x64",
-    avx2: false,
   },
 ]
 
@@ -132,15 +110,29 @@ const targets = singleFlag
 
       return true
     })
-  : allTargets
+  : desktopTargets.size > 0
+    ? allTargets.filter((item) => desktopTargets.has(`${item.os}-${item.arch}`))
+    : allTargets
+
+if (targets.length === 0) {
+  console.error(
+    `No build targets selected. --single=${singleFlag}, --baseline=${baselineFlag}, --targets=${targetsFlag ?? "none"}. ` +
+      `Note: --single only builds for the current platform (${process.platform}-${process.arch}).`,
+  )
+  process.exit(1)
+}
 
 await $`rm -rf dist`
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
-  await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
-  await $`bun install --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
-  await $`bun install --os="*" --cpu="*" @ff-labs/fff-bun@${pkg.dependencies["@ff-labs/fff-bun"]}`
+  // Only fetch native deps for the OSes/CPUs we are actually building, instead of
+  // downloading optional deps for every platform (linux musl, android, freebsd, ...).
+  const osList = [...new Set(targets.map((item) => item.os))]
+  const cpuList = [...new Set(targets.map((item) => item.arch))]
+  for (const dep of ["@opentui/core", "@parcel/watcher", "@ff-labs/fff-bun"] as const) {
+    await $`bun install --os=${osList} --cpu=${cpuList} ${dep}@${pkg.dependencies[dep]}`
+  }
 }
 for (const item of targets) {
   const name = [
