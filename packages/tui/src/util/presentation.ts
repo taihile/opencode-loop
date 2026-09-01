@@ -3,6 +3,14 @@ const logo = {
   right: ["             ▄     ", "█▀▀▀ █▀▀█ █▀▀█ █▀▀█", "█___ █__█ █__█ █^^^", "▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"],
 }
 
+// "-loop" suffix for the personal build wordmark (same letterforms as logo.ts)
+const suffix = [
+  "                       ",
+  "    █___ █▀▀█ █▀▀█ █▀▀█",
+  " ▀▀ █___ █__█ █__█ █__█",
+  "    ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ █▀▀▀",
+]
+
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
 const dim = "\x1b[90m"
@@ -22,7 +30,8 @@ function wordmark(pad = "") {
   return logo.left.map((line, index) => {
     const left = draw(line, dim, "\x1b[38;5;235m", "\x1b[48;5;235m")
     const right = draw(logo.right[index] ?? "", reset, "\x1b[38;5;238m", "\x1b[48;5;238m")
-    return `${pad}${left} ${right}`
+    const mark = draw(suffix[index] ?? "", dim, "\x1b[38;5;235m", "\x1b[48;5;235m")
+    return `${pad}${left} ${right}${mark}`
   })
 }
 

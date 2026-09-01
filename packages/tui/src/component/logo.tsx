@@ -1,7 +1,7 @@
 import { RGBA, TextAttributes } from "@opentui/core"
 import { For, type JSX } from "solid-js"
 import { tint, useTheme } from "../context/theme"
-import { logo } from "../logo"
+import { logo, suffix } from "../logo"
 
 export function Logo() {
   const { theme } = useTheme()
@@ -53,6 +53,7 @@ export function Logo() {
           <box flexDirection="row" gap={1}>
             <box flexDirection="row">{renderLine(line, theme.textMuted, false)}</box>
             <box flexDirection="row">{renderLine(logo.right[index()], theme.text, true)}</box>
+            <box flexDirection="row">{renderLine(suffix.lines[index()] ?? "", theme.textMuted, false)}</box>
           </box>
         )}
       </For>
