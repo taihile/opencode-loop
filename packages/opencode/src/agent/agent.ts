@@ -179,6 +179,49 @@ const layer = Layer.effect(
             mode: "primary",
             native: true,
           },
+          loop: {
+            name: "loop",
+            description: "Loop mode. Autonomous iterate-and-verify mode: explore, hypothesize, edit, run tests, reflect, repeat.",
+            options: {},
+            // Loop engineering: unattended iterative execution. Read tools stay
+            // open, but every mutation goes through the permission gate so a
+            // runaway hypothesis can still be stopped by a human.
+            steps: 200,
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                question: "allow",
+                // loop owns its own lifecycle, plan tools are off
+                plan_enter: "deny",
+                plan_exit: "deny",
+                task: {
+                  // dispatch read-heavy scouting to the explore subagent
+                  explore: "allow",
+                  general: "deny",
+                },
+                // recursive self-delegation is the classic runaway path
+                doom_loop: "ask",
+                bash: {
+                  "*": "ask",
+                  "git status": "allow",
+                  "git diff*": "allow",
+                  "git log*": "allow",
+                  "bun typecheck": "allow",
+                  "bun test*": "allow",
+                  "npm test*": "allow",
+                  "npm run*": "allow",
+                  "pytest*": "allow",
+                  "go test*": "allow",
+                  "cargo test*": "allow",
+                  "cargo check*": "allow",
+                  "cargo build*": "allow",
+                },
+              }),
+              user,
+            ),
+            mode: "primary",
+            native: true,
+          },
           general: {
             name: "general",
             description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
