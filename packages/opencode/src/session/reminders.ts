@@ -25,14 +25,24 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   if (!userMessage) return input.messages
 
   if (input.agent.name === "loop") {
-    userMessage.parts.push({
-      id: PartID.ascending(),
-      messageID: userMessage.info.id,
-      sessionID: userMessage.info.sessionID,
-      type: "text",
-      text: LOOP_MODE,
-      synthetic: true,
-    })
+    // inject once per turn: skip when the reminder is already persisted on the
+    // last user message (the runner reloads messages from the DB every step)
+    const already = userMessage.parts.some(
+      (part) => part.type === "text" && part.synthetic && part.text === LOOP_MODE,
+    )
+    if (!already) {
+      // persist via updatePart so the reminder survives reloads and is projected
+      // as a synthetic event (hidden in the TUI) the same way plan reminders are
+      const part = yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: userMessage.info.id,
+        sessionID: userMessage.info.sessionID,
+        type: "text",
+        text: LOOP_MODE,
+        synthetic: true,
+      })
+      userMessage.parts.push(part)
+    }
     return input.messages
   }
 
