@@ -5,7 +5,13 @@ import { Installation } from "@/installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { GlobalBus } from "@/bus/global"
 
+// Personal fork: automatic update checks are unconditionally disabled so a
+// self-built binary is never overwritten by an official release. Manual
+// upgrades still work via the `opencode upgrade` command.
+const AUTOUPDATE_DISABLED = true
+
 export async function upgrade() {
+  if (AUTOUPDATE_DISABLED) return
   const config = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
   if (config.autoupdate === false || Flag.OPENCODE_DISABLE_AUTOUPDATE) return
   const method = await Installation.method()
