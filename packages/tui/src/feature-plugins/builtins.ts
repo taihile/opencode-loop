@@ -7,7 +7,9 @@ import SidebarFooter from "./sidebar/footer"
 import SidebarLsp from "./sidebar/lsp"
 import SidebarMcp from "./sidebar/mcp"
 import SidebarTodo from "./sidebar/todo"
+import SidebarAgentGraph from "./sidebar/agent-graph"
 import DiffViewer from "./system/diff-viewer"
+import StepGraphViewer from "./system/step-graph-viewer"
 import Notifications from "./system/notifications"
 import PluginManager from "./system/plugins"
 import WhichKey from "./system/which-key"
@@ -26,11 +28,13 @@ export function createBuiltinPlugins(options: { experimentalEventSystem: boolean
     SidebarMcp,
     SidebarLsp,
     SidebarTodo,
+    SidebarAgentGraph,
     SidebarFiles,
     SidebarFooter,
     Notifications,
     PluginManager,
     WhichKey,
     DiffViewer,
+    StepGraphViewer,
   ]
 }

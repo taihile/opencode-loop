@@ -194,10 +194,12 @@ const layer = Layer.effect(
                 // loop owns its own lifecycle, plan tools are off
                 plan_enter: "deny",
                 plan_exit: "deny",
+                // multi-agent collaboration: the loop orchestrator may dispatch
+                // work to any subagent (user-defined agents included). Subagents
+                // still inherit task/todowrite denies from the subagent session
+                // permission derivation, so recursion stays bounded.
                 task: {
-                  // dispatch read-heavy scouting to the explore subagent
-                  explore: "allow",
-                  general: "deny",
+                  "*": "allow",
                 },
                 // recursive self-delegation is the classic runaway path
                 doom_loop: "ask",

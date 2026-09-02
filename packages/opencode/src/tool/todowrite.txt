@@ -19,11 +19,13 @@ Skip when:
 - `pending` - not started
 - `in_progress` - actively working (exactly ONE at a time)
 - `completed` - finished successfully
+- `failed` - verification failed: the change was made but its acceptance check did not pass
 - `cancelled` - no longer needed
 
 ## Rules
 - Update status in real time; don't batch completions
 - Mark `completed` only after the required work is actually done, including any required verification. Never based on intent.
+- Mark `failed` when verification (tests/typecheck/build) rejects the change — never silently retry; record what failed in a follow-up todo
 - Keep exactly one `in_progress` while work remains
 - If blocked or partial, keep it `in_progress` and add a follow-up todo describing the blocker
 - Preserve user-provided commands verbatim (flags, args, order)

@@ -25,7 +25,18 @@ import { SplitBorder } from "../../ui/border"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { Spinner } from "../../component/spinner"
 import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useTheme } from "../../context/theme"
-import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
+import {
+  BoxRenderable,
+  ScrollBoxRenderable,
+  addDefaultParsers,
+  createMarkdownCodeBlockRenderer,
+  TextAttributes,
+  RGBA,
+  type Renderable,
+} from "@opentui/core"
+import { createMermaidCard, MERMAID_LANGS } from "../../component/mermaid-preview"
+import { exportMermaidFile } from "../../component/mermaid-export"
+import open from "open"
 import { Prompt, type PromptRef } from "../../component/prompt"
 import type {
   AssistantMessage,
@@ -1684,9 +1695,48 @@ function ReasoningHeader(props: {
   )
 }
 
+/** A fenced code block is complete once its closing fence has arrived (streaming guard). */
+function isClosedFence(raw: string): boolean {
+  const fences = raw.split("```").length - 1
+  return fences >= 2 && raw.trimEnd().endsWith("```")
+}
+
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
-  const { theme, syntax } = useTheme()
+  const { theme, syntax, mode } = useTheme()
+  const toast = useToast()
+  const renderer = useRenderer()
+
+  // Runs outside the solid reconciler: build raw renderables, no JSX.
+  const renderNode = createMarkdownCodeBlockRenderer(
+    Object.fromEntries(
+      MERMAID_LANGS.map((lang) => [
+        lang,
+        (token: { text: string; raw: string }, context: { defaultRender: () => Renderable | null }) => {
+          if (!isClosedFence(token.raw)) return context.defaultRender() ?? undefined
+          const fallback = context.defaultRender()
+          if (!fallback) return undefined
+          return createMermaidCard({
+            source: token.text,
+            ctx: fallback.ctx,
+            fg: theme.markdownLink,
+            muted: theme.textMuted,
+            background: theme.backgroundPanel,
+            backgroundHover: theme.backgroundElement,
+            border: theme.border,
+            onOpen: () => {
+              if (renderer.getSelection()?.getSelectedText()) return
+              void exportMermaidFile({ source: token.text, theme: mode() })
+                .then((filepath) => open(filepath))
+                .then(() => toast.show({ message: "Opened diagram in browser", variant: "success" }))
+                .catch(() => toast.show({ message: "Failed to open diagram", variant: "error" }))
+            },
+          })
+        },
+      ]),
+    ),
+  )
+
   return (
     <Show when={props.part.text.trim()}>
       <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
@@ -1699,6 +1749,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
           conceal={ctx.conceal()}
           fg={theme.markdownText}
           bg={theme.background}
+          renderNode={renderNode}
         />
       </box>
     </Show>
