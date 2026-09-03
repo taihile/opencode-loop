@@ -12,6 +12,7 @@ import { ProviderTransform } from "@/provider/transform"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_TEST_EXPERT from "./prompt/test-expert.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
@@ -257,6 +258,43 @@ const layer = Layer.effect(
             ),
             description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
             prompt: PROMPT_EXPLORE,
+            options: {},
+            mode: "subagent",
+            native: true,
+          },
+          "test-expert": {
+            name: "test-expert",
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                "*": "deny",
+                // read-only evidence gathering
+                read: "allow",
+                grep: "allow",
+                glob: "allow",
+                list: "allow",
+                // acceptance checks: run tests/typecheck/build, nothing that mutates
+                bash: {
+                  "*": "deny",
+                  "git status": "allow",
+                  "git diff*": "allow",
+                  "git log*": "allow",
+                  "bun typecheck": "allow",
+                  "bun test*": "allow",
+                  "npm test*": "allow",
+                  "npm run*": "allow",
+                  "pytest*": "allow",
+                  "go test*": "allow",
+                  "cargo test*": "allow",
+                  "cargo check*": "allow",
+                  "cargo build*": "allow",
+                },
+                external_directory: readonlyExternalDirectory,
+              }),
+              user,
+            ),
+            description: `Verification and acceptance specialist. Use this agent to run the acceptance check at the end of each loop iteration: it executes the stated verification command (tests/typecheck/build) with fresh eyes and reports a strict verdict (PASS / FAIL / BLOCKED) with reproducible evidence. Never use it for implementation — it only runs, reads, and judges. Its PASS verdict is the signal that the loop's stop condition is satisfied.`,
+            prompt: PROMPT_TEST_EXPERT,
             options: {},
             mode: "subagent",
             native: true,

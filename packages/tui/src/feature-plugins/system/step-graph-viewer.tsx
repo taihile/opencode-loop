@@ -69,6 +69,13 @@ function StepGraphViewer(props: { api: TuiPluginApi }) {
 
   const editCount = createMemo(() => step()?.tools.filter((t) => t.tool === "edit" || t.tool === "write").length ?? 0)
 
+  // Null-safe accessors: the backlog can be empty (task just started, no
+  // TodoWrite yet) and `step()` is undefined until steps arrive.
+  const stepStatus = createMemo(() => step()?.status)
+  const stepAttempts = createMemo(() => step()?.attempts)
+  const stepFirstMessage = createMemo(() => step()?.firstMessageID)
+  const stepLastMessage = createMemo(() => step()?.lastMessageID)
+
   let tree: ScrollBoxRenderable | undefined
   const scrollAcceleration = createMemo(() => getScrollAcceleration(props.api.tuiConfig))
 
@@ -255,22 +262,22 @@ function StepGraphViewer(props: { api: TuiPluginApi }) {
                     gap={0}
                   >
                     <text fg={theme().text} wrapMode="word">
-                      <b>Step {step()!.index + 1}</b>
+                      <b>Step {(step()?.index ?? 0) + 1}</b>
                     </text>
-                    <text fg={statusColor(theme, step()!.status)} wrapMode="word">
-                      Status: {step()!.status} · attempts: {step()!.attempts}
+                    <text fg={statusColor(theme, stepStatus() ?? "unknown")} wrapMode="word">
+                      Status: {stepStatus() ?? "unknown"} · attempts: {stepAttempts() ?? 0}
                     </text>
-                    <Show when={step()!.tools.length > 0}>
+                    <Show when={step()?.tools.length}>
                       <text fg={theme().textMuted} wrapMode="word">
-                        {editCount()} edits · {step()!.tools.length} tool calls
+                        {editCount()} edits · {step()?.tools.length ?? 0} tool calls
                       </text>
                     </Show>
                     <Show
-                      when={step()!.firstMessageID}
+                      when={stepFirstMessage()}
                       fallback={<text fg={theme().textMuted}>No messages linked yet</text>}
                     >
                       <text fg={theme().textMuted} wrapMode="none">
-                        Linked: {step()!.firstMessageID!.slice(0, 18)}
+                        Linked: {stepFirstMessage()!.slice(0, 18)}
                       </text>
                     </Show>
                     <box marginTop={1} flexDirection="column" gap={0}>
@@ -284,7 +291,7 @@ function StepGraphViewer(props: { api: TuiPluginApi }) {
                       <Show when={diff.loading}>
                         <text fg={theme().textMuted}>Loading diff...</text>
                       </Show>
-                      <Show when={!diff.loading && patches().length === 0 && step()!.lastMessageID}>
+                      <Show when={!diff.loading && patches().length === 0 && stepLastMessage()}>
                         <text fg={theme().textMuted}>No file changes in this step</text>
                       </Show>
                     </box>

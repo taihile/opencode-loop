@@ -135,9 +135,10 @@ function lastActiveIndex(todos: readonly Pick<Todo, "content" | "status">[]): nu
 /**
  * Diff message range for a step: the message to diff *from* is the step's
  * first message's parent (i.e. diff covers the step's own changes).
+ * Tolerates an undefined step (empty backlog) — callers pass `step()` directly.
  */
-export function stepDiffRange(step: Step): { messageID: string } | undefined {
-  if (!step.lastMessageID) return undefined
+export function stepDiffRange(step: Step | undefined): { messageID: string } | undefined {
+  if (!step?.lastMessageID) return undefined
   return { messageID: step.lastMessageID }
 }
 

@@ -96,4 +96,10 @@ describe("stepDiffRange", () => {
     const graph = buildStepGraph(baseInput as any, "s1")
     expect(stepDiffRange(graph.steps[2]!)).toBeUndefined()
   })
+
+  test("tolerates an undefined step (empty backlog crash guard)", () => {
+    // Regression: opening /steps before any TodoWrite crashed with
+    // "undefined is not an object (evaluating 'e.lastMessageID')".
+    expect(stepDiffRange(undefined)).toBeUndefined()
+  })
 })

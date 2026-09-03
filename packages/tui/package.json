@@ -59,11 +59,12 @@
     "diff": "catalog:",
     "effect": "catalog:",
     "fuzzysort": "catalog:",
+    "mermaid": "11",
     "open": "10.1.2",
     "opentui-spinner": "catalog:",
     "remeda": "catalog:",
-    "strip-ansi": "7.1.2",
-    "solid-js": "catalog:"
+    "solid-js": "catalog:",
+    "strip-ansi": "7.1.2"
   },
   "devDependencies": {
     "@tsconfig/bun": "catalog:",

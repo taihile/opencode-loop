@@ -35,11 +35,12 @@ reproduced before it is fixed.
 ## Iteration Discipline
 
 - Use the TodoWrite tool to maintain the iteration backlog. Every loop entry: hypothesis, action, verification result. Keep it current — it is your working memory across steps.
-- **Acceptance per iteration.** After every VERIFY, update the todo entry to reflect the verdict: `completed` only when the acceptance check passed; `failed` with a short reason appended to the content when it did not. A step is never left stale — the backlog is the user's window into the loop.
-- **Stop conditions.** Loop termination is a first-class concern. Stop only when:
-  - The stated goal is met AND verified end-to-end, or
+- **Acceptance per iteration.** After every VERIFY, dispatch the `test-expert` subagent to run the acceptance check independently — it has read-only + test/build access and returns a strict verdict (PASS / FAIL / BLOCKED). Update the todo entry to match: `completed` when test-expert returns PASS; `failed` with the summary appended when FAIL. Never mark a step completed based on your own impression — the acceptance verdict belongs to test-expert.
+- **Stop conditions.** Loop termination is a first-class concern. Stop when:
+  - The stated goal is met AND `test-expert` returned a PASS verdict on the final verification (its PASS is the signal that the stop condition is satisfied), or
   - You have exhausted the approach and must recommend a different one, or
   - You are blocked by a decision only the user can make.
+  When test-expert says PASS on the end-to-end goal, do not start another iteration — stop and summarize.
 - **Two identical failures = pivot.** If the same fix strategy fails twice with the same error, do not retry it a third time. Step back, re-read the actual error, and change strategy. Repeating identical tool calls triggers the doom-loop guard and will surface to the user.
 - **Budget awareness.** You have a limited step budget per turn. If it is running low, consolidate: pick the highest-probability fix, verify once, and summarize state cleanly so the next turn can resume.
 - **Checkpoint by committing understanding.** After each verified iteration, your summary line should let a cold reader reconstruct exactly what changed and why.

@@ -3,12 +3,23 @@ import { mermaidHtml, exportMermaidFile } from "../../src/component/mermaid-expo
 import { mermaidKind } from "../../src/component/mermaid-preview"
 
 describe("mermaidHtml", () => {
-  test("embeds escaped source, CDN import and theme", () => {
+  test("references the local runtime and theme", () => {
     const html = mermaidHtml({ source: "flowchart TD\n  A --> B", theme: "dark" })
     expect(html).toContain(`"flowchart TD\\n  A --> B"`)
-    expect(html).toContain("cdn.jsdelivr.net/npm/mermaid@11")
+    // Runtime ships as a sibling file (offline), falling back to CDN only
+    // when the dependency is missing.
+    expect(html).toMatch(/src="(opencode-mermaid-runtime\.js|https:\/\/cdn\.jsdelivr\.net[^"]*)"/)
     expect(html).toContain(`theme: "dark"`)
     expect(html).toContain(`securityLevel: "strict"`)
+  })
+
+  test("avoids the mermaid render id colliding with the container id", () => {
+    // Regression: mermaid.render("graph", ...) removes the DOM element whose
+    // id equals the render id — the diagram container vanished from the page.
+    const html = mermaidHtml({ source: "flowchart TD", theme: "dark" })
+    expect(html).toContain('id="mermaid-graph"')
+    expect(html).not.toContain('render("graph"')
+    expect(html).toContain('"opencode-diagram"')
   })
 
   test("uses light theme palette for light mode", () => {
