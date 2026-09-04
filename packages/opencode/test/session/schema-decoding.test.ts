@@ -262,9 +262,10 @@ describe("Todo.Info", () => {
 })
 
 describe("SessionPrompt input schemas", () => {
-  test("LoopInput is just sessionID", () => {
+  test("LoopInput is just sessionID with optional loop_count", () => {
     const decode = decodeUnknown(SessionPrompt.LoopInput)
     expect(decode({ sessionID })).toEqual({ sessionID })
+    expect(decode({ sessionID, loop_count: 5 })).toEqual({ sessionID, loop_count: 5 })
   })
 
   test("ShellInput requires agent + command", () => {

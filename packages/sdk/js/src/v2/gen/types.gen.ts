@@ -10105,6 +10105,7 @@ export type SessionSummarizeData = {
     providerID: string
     modelID: string
     auto?: boolean
+    loop_count?: number
   }
   path: {
     sessionID: string

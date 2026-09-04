@@ -502,6 +502,74 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     const session = createSession()
 
+    function createLoop() {
+      const [loopStore, setLoopStore] = createStore<{
+        ready: boolean
+        default: number | undefined
+        count: Record<string, number | undefined>
+      }>({
+        ready: false,
+        default: undefined,
+        count: {},
+      })
+
+      const filePath = path.join(paths.state, "loop.json")
+
+      function save() {
+        if (!loopStore.ready) return
+        void writeJsonAtomic(filePath, { default: loopStore.default, count: loopStore.count })
+      }
+
+      readJson<unknown>(filePath)
+        .then((x) => {
+          if (!x || typeof x !== "object") return
+          const value = x as Record<string, unknown>
+          if (typeof value.default === "number") setLoopStore("default", value.default)
+          const count = value.count
+          if (typeof count === "object" && count !== null) {
+            const parsed: Record<string, number | undefined> = {}
+            for (const [k, v] of Object.entries(count as Record<string, unknown>)) {
+              if (typeof v === "number") parsed[k] = v
+            }
+            setLoopStore("count", parsed)
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setLoopStore("ready", true)
+        })
+
+      return {
+        /** effective loop count for a session: session value, falling back to the global default */
+        get(sessionID: string | undefined) {
+          if (sessionID && loopStore.count[sessionID] !== undefined) return loopStore.count[sessionID]
+          return loopStore.default
+        },
+        /** the effective value shown before a session exists */
+        getDefault() {
+          return loopStore.default
+        },
+        set(sessionID: string | undefined, count: number | undefined) {
+          batch(() => {
+            if (sessionID) {
+              if (count === undefined) {
+                const next = { ...loopStore.count }
+                delete next[sessionID]
+                setLoopStore("count", next)
+              } else {
+                setLoopStore("count", sessionID, count)
+              }
+            } else {
+              setLoopStore("default", count)
+            }
+            save()
+          })
+        },
+      }
+    }
+
+    const loop = createLoop()
+
     const mcp = {
       isEnabled(name: string) {
         const status = sync.data.mcp[name]
@@ -535,6 +603,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       agent,
       mcp,
       session,
+      loop,
       permission,
     }
     return result

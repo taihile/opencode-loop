@@ -592,6 +592,7 @@ export function Session() {
           sessionID: route.sessionID,
           modelID: selectedModel.modelID,
           providerID: selectedModel.providerID,
+          loop_count: local.loop?.get(route.sessionID),
         })
         dialog.clear()
       },

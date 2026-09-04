@@ -46,6 +46,7 @@ import { useDialog } from "../../ui/dialog"
 import { DialogProvider as DialogProviderConnect } from "../dialog-provider"
 import { DialogAlert } from "../../ui/dialog-alert"
 import { useToast } from "../../ui/toast"
+import { DialogPrompt } from "../../ui/dialog-prompt"
 import { useKV } from "../../context/kv"
 import { createFadeIn } from "../../util/signal"
 import { DialogSkill } from "../dialog-skill"
@@ -551,6 +552,53 @@ export function Prompt(props: PromptProps) {
         slashName: "move",
         run: () => {
           move.open()
+        },
+      },
+      {
+        title: "Set loop count",
+        desc: "Max loop iterations for the loop agent",
+        name: "session.loop",
+        category: "Session",
+        slashName: "loop",
+        run: () => {
+          const target = props.sessionID ?? (route.data.type === "session" ? route.data.sessionID : undefined)
+          const current = local.loop.get(target)
+          dialog.replace(() => (
+            <DialogPrompt
+              title="Set Loop Count"
+              placeholder={`Max iterations (blank=unlimited, current: ${current !== undefined ? current : "unlimited"})`}
+              value={current !== undefined ? String(current) : ""}
+              onConfirm={(value) => {
+                const trimmed = value.trim()
+                if (trimmed === "" || trimmed === "0") {
+                  local.loop.set(target, undefined)
+                  toast.show({
+                    variant: "info",
+                    message: "Loop count cleared (unlimited)",
+                    duration: 2000,
+                  })
+                } else {
+                  const count = parseInt(trimmed, 10)
+                  if (isNaN(count) || count <= 0) {
+                    toast.show({
+                      variant: "warning",
+                      message: "Please enter a valid positive number",
+                      duration: 3000,
+                    })
+                    return
+                  }
+                  local.loop.set(target, count)
+                  toast.show({
+                    variant: "success",
+                    message: `Loop count set to ${count}`,
+                    duration: 2000,
+                  })
+                }
+                dialog.clear()
+              }}
+              onCancel={() => dialog.clear()}
+            />
+          ))
         },
       },
     ].map((entry) => ({
@@ -1300,6 +1348,16 @@ export function Prompt(props: PromptProps) {
     return !!current
   })
 
+  // Effective loop count: session override → global default → loop agent's
+  // built-in step ceiling (200). Shown whenever the loop agent is active, so
+  // Tab-switching to it immediately surfaces the budget without a /loop call.
+  const loopCount = createMemo(() => {
+    const agent = local.agent.current()
+    if (agent?.name !== "loop") return undefined
+    const routeSessionID = route.data.type === "session" ? route.data.sessionID : undefined
+    return local.loop.get(props.sessionID ?? routeSessionID) ?? agent.steps ?? 200
+  })
+
   const agentMetaAlpha = createFadeIn(() => !!local.agent.current(), animationsEnabled)
   const modelMetaAlpha = createFadeIn(() => !!local.agent.current() && store.mode === "normal", animationsEnabled)
   const variantMetaAlpha = createFadeIn(
@@ -1462,6 +1520,12 @@ export function Prompt(props: PromptProps) {
                             {local.model.parsed().model}
                           </text>
                           <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                          <Show when={loopCount() !== undefined}>
+                            <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                            <text flexShrink={0} fg={fadeColor(theme.accent, modelMetaAlpha())}>
+                              loop {loopCount()}
+                            </text>
+                          </Show>
                           <Show when={showVariant()}>
                             <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
                             <text>
